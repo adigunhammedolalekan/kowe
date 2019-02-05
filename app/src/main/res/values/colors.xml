@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="colorPrimary">#ff0000</color>
+    <color name="colorPrimaryDark">#ff0000</color>
+    <color name="colorAccent">#ff0000</color>
+    <color name="lightWindowBackground">#FAFAFA</color>
+    <color name="lightDivider">#80949494</color>
+    <color name="light_patch_addition_color">#CCFFCC</color>
+    <color name="light_patch_deletion_color">#FFDDDD</color>
+    <color name="light_patch_ref_color">#EEEEEE</color>
+    <color name="light_primary">#F5F5F5</color>
+    <color name="light_primary_dark">#E0E0E0</color>
+    <color name="light_accent">#2962FF</color>
+    <color name="material_yellow">#FAB915</color>
+    <color name="white">#ffffff</color>
+    <color name="divider">#80B6B6B6</color>
+    <color name="textColorPrimary">#212121</color>
+    <color name="transparent">#99000000</color>
+    <color name="textColorSecondary">#757575</color>
+    <color name="yellow">#FFFFEE00</color>
+    <color name="green">#4caf50</color>
+    <color name="red">#ff0000</color>
+    <color name="transparent_white">#80FFFFFF</color>
+    <color name="primary_light">#80191919</color>
+    <color name="light__">#80757575</color>
+    <color name="blue">#2196F3</color>
+    <color name="dark">#191919</color>
+    <color name="fb">#3f63ab</color>
+</resources>
