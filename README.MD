@@ -11,6 +11,7 @@ A beautiful and robust android call recorder app
 * Ghost mode - Options to hide app icon
 
 ### Tech Stack
+* Kotlin
 * Android Architecture Components(Room, LiveData, ViewModel, Repository Pattern)
 * Koin DI Framework
 * ButterKnife
