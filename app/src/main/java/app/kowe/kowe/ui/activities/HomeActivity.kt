@@ -14,6 +14,7 @@ import android.support.v7.widget.RecyclerView
 import android.view.View
 import android.widget.LinearLayout
 import app.kowe.kowe.R
+import app.kowe.kowe.Util
 import app.kowe.kowe.bindView
 import app.kowe.kowe.data.models.Record
 import app.kowe.kowe.ui.adapters.RecordsListAdapter
@@ -64,6 +65,9 @@ class HomeActivity: AppCompatActivity() {
             }
 
             data.forEach {
+                if (it.recordStartTime > 0) {
+                    it.readableTime = Util.format(it.recordStartTime)
+                }
                 records.add(it)
             }
 

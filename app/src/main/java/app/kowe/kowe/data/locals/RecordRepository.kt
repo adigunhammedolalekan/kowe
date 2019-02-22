@@ -16,7 +16,7 @@ interface RecordRepository {
     fun markSynced(id: Long)
 }
 
-class RecordRepositoryImpl(val database: RecordDao) : RecordRepository {
+class RecordRepositoryImpl(private val database: RecordDao) : RecordRepository {
 
     override fun markSynced(id: Long) {
         database.markSynced(id)

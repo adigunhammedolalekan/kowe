@@ -27,7 +27,7 @@ class NetworkChangeReceiver: BroadcastReceiver() {
             val connectivityManager = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             val netInfo = connectivityManager.activeNetworkInfo
 
-            if (netInfo.isConnectedOrConnecting) {
+            if (netInfo != null && netInfo.isConnectedOrConnecting) {
 
                 val syncServiceIntent = Intent(context, CallSyncService::class.java)
                 context.startService(syncServiceIntent)

@@ -1,13 +1,13 @@
 package app.kowe.kowe.services
 
 import android.Manifest
+import android.app.Application
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
+import android.os.Build
 import android.os.Environment
-import android.os.IBinder
 import android.support.v4.app.ActivityCompat
 import android.telephony.TelephonyManager
 import app.kowe.kowe.KoweSettings
@@ -15,6 +15,7 @@ import app.kowe.kowe.L
 import app.kowe.kowe.data.locals.RecordRepository
 import app.kowe.kowe.data.models.Record
 import app.kowe.kowe.recv.CallReceiver
+import app.kowe.kowe.NotificationUtil
 import org.koin.android.ext.android.inject
 import java.io.File
 import java.util.*
@@ -30,8 +31,8 @@ internal class CallRecorderService: Service() {
     private var currentState = STATE_RECORDING_STOPPED
     private lateinit var recorder: MediaRecorder
     private lateinit var record: Record
-    private val recordFile = createUniqueFile()
-    private var context: Context = this
+    private lateinit var recordFile: File
+    private lateinit var app: Application
 
 
     companion object {
@@ -39,7 +40,8 @@ internal class CallRecorderService: Service() {
         const val STATE_RECORDING = 1
         const val STATE_RECORDING_STOPPED = 2
         const val RECORDS_FOLDER_NAME = "KoweData"
-
+        const val CLICK_ACTION = "NotificationClickAction"
+        const val ACTION_STOP_RECORDING = "stop_recording"
     }
 
     override fun onBind(p0: Intent?) = null
@@ -47,20 +49,23 @@ internal class CallRecorderService: Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
-        context = this
+        app = applicationContext as Application
         if (intent == null) {
+            return START_NOT_STICKY
+        }
+        val notificationAction = intent.extras.getString(CLICK_ACTION, "")
+        if (notificationAction == ACTION_STOP_RECORDING) {
+            stopRecording()
             return START_NOT_STICKY
         }
 
         val phoneState = intent.extras.getString(CallReceiver.INTERNAL_ACTION_PHONE_STATE)
         record = intent.extras.getParcelable(CallReceiver.INTERNAL_EXTRA_DATA)
 
-        L.fine("Phone state is => " + phoneState)
         if (currentState == STATE_RECORDING) {
             return START_NOT_STICKY
         }
 
-        L.fine("Starting or stopping records")
         when(phoneState) {
 
             TelephonyManager.EXTRA_STATE_OFFHOOK -> {
@@ -70,7 +75,7 @@ internal class CallRecorderService: Service() {
                     startRecording()
 
                     record.recordStartTime = Date().time
-                    record.savedPath = recordFile?.absolutePath
+                    record.savedPath = recordFile.absolutePath
                     record.synced = false
                 }else {
 
@@ -84,9 +89,8 @@ internal class CallRecorderService: Service() {
                 stopRecording()
                 releaseMediaRecorder()
 
-                saveRecordedFile()
             } else -> {
-                L.fine("UnHandled => " + phoneState)
+
             }
         }
 
@@ -95,37 +99,48 @@ internal class CallRecorderService: Service() {
 
     private fun startRecording() {
 
-        L.fine("Starts Recording")
         if (currentState == STATE_RECORDING) return
 
         val permissionState = ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
         if (permissionState == PackageManager.PERMISSION_DENIED) return
 
-        if (prepareRecorder()) {
+        try {
 
-            try {
-
-                recorder.start()
-                currentState = STATE_RECORDING
-            }catch (e: Exception) {
-                L.error(e)
-            }
+            showForeGroundNotification()
+            recorder.start()
+            currentState = STATE_RECORDING
+        }catch (e: Exception) {
+            L.error(e)
         }
+    }
+
+    private fun showForeGroundNotification() {
+
+        val isPre0 = Build.VERSION.SDK_INT <= Build.VERSION_CODES.N_MR1
+
+        if (isPre0) NotificationUtil.PreO.createNotification(this)
+        else NotificationUtil.O.createNotification(this)
+    }
+
+    private fun dismissForeGroundNotification() {
+
+        stopForeground(true)
+        stopSelf()
     }
 
     private fun prepareRecorder(): Boolean {
 
+        recordFile = createUniqueFile()
         recorder = MediaRecorder().apply {
             setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.AMR_NB)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB)
-            setOutputFile(recordFile?.absolutePath)
+            setOutputFormat(MediaRecorder.OutputFormat.DEFAULT)
+            setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT)
+            setOutputFile(recordFile.absolutePath)
             setOnErrorListener { mediaRecorder, i, i1 ->
 
                 // error occurred
                 // just delete the created file
-                recordFile?.delete()
-                L.fine("Error!")
+                recordFile.delete()
             }
         }
 
@@ -141,14 +156,15 @@ internal class CallRecorderService: Service() {
         return true
     }
 
-    private fun createUniqueFile(): File? {
+    private fun createUniqueFile(): File {
 
+        app = applicationContext as Application
         try {
 
             val recordFolder = if (!settings.keepRecordsPrivate()) {
                 Environment.DIRECTORY_MUSIC
             }else {
-                context.cacheDir.absolutePath
+                app.cacheDir.absolutePath
             }
 
             val path = recordFolder + File.separator + RECORDS_FOLDER_NAME
@@ -157,18 +173,14 @@ internal class CallRecorderService: Service() {
             if (!folder.exists()) {
                 folder.mkdirs()
             }
-            L.fine("Path => ${folder.absolutePath}, Exits => ${folder.exists()}")
 
-            val id = "Record-" + UUID.randomUUID().toString() + ".amr"
-            val file = File(folder, id)
-            file.createNewFile()
-
-            return file
+            val id = "Record" + UUID.randomUUID().toString() + ".amr"
+            return File(folder, id)
         }catch (e: Exception) {
             L.error(e)
         }
 
-        return null
+        return File(UUID.randomUUID().toString())
     }
 
     private fun releaseMediaRecorder() {
@@ -195,6 +207,8 @@ internal class CallRecorderService: Service() {
             }
 
             currentState = STATE_RECORDING_STOPPED
+            dismissForeGroundNotification()
+            saveRecordedFile()
         }catch (e: Exception) {}
     }
 

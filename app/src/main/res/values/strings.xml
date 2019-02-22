@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Kowe</string>
+    <string name="notification_text_title">Kowe: Call Recorder</string>
+    <string name="notification_text_content">Call recording in progress</string>
 </resources>
