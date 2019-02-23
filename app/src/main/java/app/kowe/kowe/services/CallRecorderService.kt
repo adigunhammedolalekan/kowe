@@ -53,18 +53,19 @@ internal class CallRecorderService: Service() {
         if (intent == null) {
             return START_NOT_STICKY
         }
+
+        // check if notification action button 'Stop Recording'
+        // was clicked and stop notification if it was
         val notificationAction = intent.extras.getString(CLICK_ACTION, "")
         if (notificationAction == ACTION_STOP_RECORDING) {
             stopRecording()
             return START_NOT_STICKY
         }
 
+        // retrieve phone state to determine
+        // if we are to start a recording session
+        // or end the one we've already started
         val phoneState = intent.extras.getString(CallReceiver.INTERNAL_ACTION_PHONE_STATE)
-        record = intent.extras.getParcelable(CallReceiver.INTERNAL_EXTRA_DATA)
-
-        if (currentState == STATE_RECORDING) {
-            return START_NOT_STICKY
-        }
 
         when(phoneState) {
 
@@ -72,20 +73,22 @@ internal class CallRecorderService: Service() {
 
                 if (prepareRecorder()) {
 
-                    startRecording()
-
+                    // grab record data
+                    record = intent.extras.getParcelable(CallReceiver.INTERNAL_EXTRA_DATA)
                     record.recordStartTime = Date().time
                     record.savedPath = recordFile.absolutePath
                     record.synced = false
-                }else {
 
-                    stopRecording()
-                    releaseMediaRecorder()
+                    // start recording
+                    startRecording()
+
                 }
             }
-
             TelephonyManager.EXTRA_STATE_IDLE -> {
 
+                // phone has entered idle state
+                // stop recording and clean up
+                // resources
                 stopRecording()
                 releaseMediaRecorder()
 
@@ -97,6 +100,11 @@ internal class CallRecorderService: Service() {
         return START_STICKY
     }
 
+    // start call recording.
+    // check if we are not already recording and returns
+    // immediately if we are. Also, check for RECORD_AUDIO
+    // permission to prevent app from attempting to record
+    // voices without being given permission
     private fun startRecording() {
 
         if (currentState == STATE_RECORDING) return
@@ -114,6 +122,10 @@ internal class CallRecorderService: Service() {
         }
     }
 
+    // show foreground notification
+    // to make user aware that a recording
+    // is going on, also to give user an option
+    // to cancel/stop recording session
     private fun showForeGroundNotification() {
 
         val isPre0 = Build.VERSION.SDK_INT <= Build.VERSION_CODES.N_MR1
@@ -128,13 +140,15 @@ internal class CallRecorderService: Service() {
         stopSelf()
     }
 
+    // prepare android mediarecorder by setting
+    // all necessary parameters
     private fun prepareRecorder(): Boolean {
 
         recordFile = createUniqueFile()
         recorder = MediaRecorder().apply {
             setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.DEFAULT)
-            setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT)
+            setOutputFormat(MediaRecorder.OutputFormat.AMR_WB)
+            setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB)
             setOutputFile(recordFile.absolutePath)
             setOnErrorListener { mediaRecorder, i, i1 ->
 
@@ -156,13 +170,19 @@ internal class CallRecorderService: Service() {
         return true
     }
 
+    // create a unique file in android file system
+    // based on user's preference. Private cache
+    // dir would be used if users does not want
+    // records indexing by music player or file
+    // manager apps, or the android music directory
+    // if the user does not care
     private fun createUniqueFile(): File {
 
         app = applicationContext as Application
         try {
 
             val recordFolder = if (!settings.keepRecordsPrivate()) {
-                Environment.DIRECTORY_MUSIC
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC).absolutePath
             }else {
                 app.cacheDir.absolutePath
             }
@@ -183,6 +203,7 @@ internal class CallRecorderService: Service() {
         return File(UUID.randomUUID().toString())
     }
 
+    // release resources
     private fun releaseMediaRecorder() {
 
         if (currentState == STATE_RECORDING_STOPPED) return
@@ -197,25 +218,27 @@ internal class CallRecorderService: Service() {
         }catch (e: Exception) { }
     }
 
+    // stops an on-going recording session
     private fun stopRecording() {
 
         L.fine("Stops Recording!")
         try {
 
-            recorder.apply {
-                stop()
-            }
-
-            currentState = STATE_RECORDING_STOPPED
             dismissForeGroundNotification()
             saveRecordedFile()
-        }catch (e: Exception) {}
+            recorder.stop()
+            currentState = STATE_RECORDING_STOPPED
+
+        } catch (e: Exception) {
+            L.error(e)
+        }
     }
 
+    // save the recorded file in
+    // the local database
     private fun saveRecordedFile() {
 
-        record.recordStopTime = Date().time
-
+        record.recordStopTime = Date().time // grab stop time
         executor.execute {
             repo.addRecord(record)
         }

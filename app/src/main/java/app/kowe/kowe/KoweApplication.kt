@@ -8,9 +8,15 @@ import org.koin.android.ext.android.startKoin
 
 class KoweApplication: Application() {
 
+    companion object {
+
+        private lateinit var app: KoweApplication
+        fun getApplication() = app
+    }
     override fun onCreate() {
         super.onCreate()
 
+        app = this
         startKoin(this, appModules)
 
         // Okay, so Android24+ does not

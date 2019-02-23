@@ -13,10 +13,12 @@ import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.view.View
 import android.widget.LinearLayout
+import app.kowe.kowe.L
 import app.kowe.kowe.R
 import app.kowe.kowe.Util
 import app.kowe.kowe.bindView
 import app.kowe.kowe.data.models.Record
+import app.kowe.kowe.ui.PlayerDialog
 import app.kowe.kowe.ui.adapters.RecordsListAdapter
 import app.kowe.kowe.ui.viewmodels.HomeViewModels
 import net.steamcrafted.materialiconlib.MaterialIconView
@@ -60,14 +62,11 @@ class HomeActivity: AppCompatActivity() {
 
         homeViewModel.liveData().observe(this, Observer { data ->
 
-            if (data?.size!! > 0) {
+            if (data?.isNotEmpty() == true) {
                 records.clear()
             }
 
-            data.forEach {
-                if (it.recordStartTime > 0) {
-                    it.readableTime = Util.format(it.recordStartTime)
-                }
+            data?.forEach {
                 records.add(it)
             }
 
@@ -85,6 +84,14 @@ class HomeActivity: AppCompatActivity() {
         recordsListAdapter = RecordsListAdapter(records)
         recordsRecyclerView.layoutManager = LinearLayoutManager(this)
         recordsRecyclerView.adapter = recordsListAdapter
+
+        recordsListAdapter.clickLister = { record ->
+
+            val dialog = PlayerDialog.newInstance(record.savedPath).apply {
+                isCancelable = false
+            }
+            dialog.show(supportFragmentManager, "PlayerViewDialog")
+        }
     }
 
     private fun fetchRecords() {

@@ -17,6 +17,7 @@ data class Record(@PrimaryKey(autoGenerate = true)
                            var recordStopTime: Long = 0,
                            var remoteUrl: String? = "",
                            var readableTime: String? = "",
+                           var contactName: String? = "",
                            var account: Int? = 0) : Parcelable {
     constructor(parcel: Parcel) : this(
             parcel.readLong(),
@@ -26,6 +27,7 @@ data class Record(@PrimaryKey(autoGenerate = true)
             parcel.readString(),
             parcel.readValue(Boolean::class.java.classLoader) as? Boolean,
             parcel.readLong(),
+            parcel.readString(),
             parcel.readString(),
             parcel.readString(),
             parcel.readValue(Int::class.java.classLoader) as? Int) {
@@ -41,6 +43,7 @@ data class Record(@PrimaryKey(autoGenerate = true)
         parcel.writeLong(recordStopTime)
         parcel.writeString(remoteUrl)
         parcel.writeString(readableTime)
+        parcel.writeString(contactName)
         parcel.writeValue(account)
     }
 

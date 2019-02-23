@@ -7,7 +7,7 @@ import android.arch.persistence.room.RoomDatabase
 import app.kowe.kowe.data.locals.dao.RecordDao
 import app.kowe.kowe.data.models.Record
 
-@Database(entities = arrayOf(Record::class), version = 2, exportSchema = false)
+@Database(entities = arrayOf(Record::class), version = 4, exportSchema = false)
 internal abstract class KoweDatabase: RoomDatabase() {
 
     companion object {
